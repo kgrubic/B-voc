@@ -10,11 +10,12 @@ block content
          small &nbsp;#{pageHeader.strapline}
   .row
     .col-xs-12.col-sm-8
+      .error= message
       .row.list-group
         each cotage in cotages
           .col-xs-12.list-group-item
             h4 
-              a(href="/cotage")= cotage.name
+              a(href="/cotages/#{cotage._id}")= cotage.name
               small &nbsp;
                 +outputRating(cotage.rating)
               span.badge.pull-right.badge-default= cotage.minstay

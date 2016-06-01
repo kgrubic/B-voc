@@ -1,5 +1,42 @@
-/* Get HOME page*/
-module.exports.homelist = function(req,res){
+var request = require('request');
+var apiOptions = {
+    server : 'http://localhost:3000'
+};
+if(process.env.NODE_ENV === 'production'){
+    apiOptions.server = "https://guarded-eyrie-79159.herokuapp.com";
+}
+
+
+var _showError = function (req, res, status) {
+  var title, content;
+  if (status === 404) {
+    title = "404, page not found";
+    content = "Oh dear. Looks like we can't find this page. Sorry.";
+  } else if (status === 500) {
+    title = "500, internal server error";
+    content = "How embarrassing. There's a problem with our server.";
+  } else {
+    title = status + ", something's gone wrong";
+    content = "Something, somewhere, has gone just a little bit wrong.";
+  }
+  res.status(status);
+  res.render('error', {
+    title : title,
+    content : content
+  });
+};
+
+var renderHomepage = function(req,res,responseBody){
+    var message;
+    if(!(responseBody instanceof Array)){
+        message = "API error lookup";
+        responseBody = [];
+    }
+    else {
+        if(!responseBody.length){
+            message = "No palaces found";
+        }
+    }
 	res.render('cotages-list',{
 		title :'B-voc : find a place for vocation',
 		pageHeader: {
@@ -7,67 +44,102 @@ module.exports.homelist = function(req,res){
 			strapline: 'Find your place to charge your batheries'
 		},
 		sidebar: "looking for a great place for a weekend or a holiday :) ",
-		cotages : [{
-			name : 'Cotage Jelena',
-			address : '124 Black Street, Fremont, CA',
-			rating : 3,
-			facilities : ['wifi','full kitchen','2 bd','1 ba','large yard'],
-			minstay : 3,
-			img: 'public/images/jelena.jpg'
-		},
-        {
-            name : 'Neveno home',
-            address : '124 Vallejo, San Jose, CA',
-            rating : 4,
-            facilities : ['wifi','full kitchen','3 bd','2,5 ba','large yard'],
-            minstay : 3
-        }
-		]
+		cotages : responseBody,
+        message : message
 		});
 }
 
+/* Get HOME page*/
+module.exports.homelist = function(req,res){
+    var requestOptions, path;
+    path = "/api/cotages";
+    requestOptions = {
+        url: apiOptions.server + path,
+        method : "GET",
+        json : {}
+    };
+    request(
+        requestOptions,
+        function(err,response,body){
+            if(err){
+                console.log(err);
+            }
+            else if(response.statusCode === 200 && body.length){
+                console.log(body);
+                renderHomepage(req,res,body)
 
-/* GET Cotage info page */
-module.exports.cotageInfo = function(req, res) {
+            }
+            else
+                console.log(response.statusCode);
+        });
+}
+
+
+
+var renderDetailPage = function(req,res,cotDatail){
     res.render('cotage-info', {
-        title: 'Cotage Jelena',
+        title: cotDatail.name,
         pageHeader: {
-            title: 'Cotage Jelena'
+            title: cotDatail.name
         },
         sidebar: {
             context: 'is on B-voc because it is a beautiful place to stay for holidays.',
             callToAction: 'If you\'ve been and you like it - or if you don\'t - please leave a review to help other people just like you.'
         },
-        cotages: {
-            name: 'Cotage Jelena',
-            address: '124 Black Street, Fremont, CA',
-            rating: 3,
-            facilities: ['wifi','full kitchen','2 bd','1 ba','large yard'],
-            coords: {
-                lat: 51.455041,
-                lng: -0.9690884
-            },
-            reviews: [{
-                author: 'Simon Holmes',
-                rating: 5,
-                timestamp: '16 July 2013',
-                reviewText: 'What a great place. I can\'t say enough good things about it.'
-            }, {
-                author: 'Charlie Chaplin',
-                rating: 3,
-                timestamp: '16 June 2013',
-                reviewText: 'It was okay. Coffee wasn\'t great, but the wifi was fast.'
-            }]
-        }
+        cotages: cotDatail
+    });
+};
+
+/* GET Cotage info page */
+var getCotageInfo = function(req, res, callback) {
+    var requestOptions,path;
+    path = "/api/cotages/" + req.params.cotagesid;
+    requestOptions = {
+        url : apiOptions.server + path,
+        method : "GET",
+        json : {}
+    };
+    request(
+        requestOptions,function(err,response,body){
+           var data = body;
+            if(response.statusCode === 200){
+                data.coords = {
+                    lng: body.coords[0],
+                    lat: body.coords[1]
+                }
+                console.log(data);
+                callback(req,res,data)
+
+            }
+             else{
+                _showError(req,res,response.statusCode);
+            }
+    });
+};
+
+module.exports.cotageInfo = function(req, res) {
+    getCotageInfo(req,res,function(req,res,responseData){
+        renderDetailPage(req,res,responseData);
     });
 };
 
 /* GET 'Add review' page */
+
+var rendderReviewForm = function (req,res,cotReview){
+    res.render('cotage-review-form',{
+        title: 'Review ' + cotReview.name+ ' on B-voc',
+        pageHeader: {title : 'Review ' + cotReview.name}
+    });
+};
 module.exports.addReview = function(req, res) {
-    res.render('cotage-review-form', {
-        title: 'Review Jelena on B-voc',
-        pageHeader: {
-            title: 'Review Jelena'
-        }
+    getCotageInfo(req,res,function(req,res,responseData){
+        rendderReviewForm(req,res,responseData);
+    });
+};
+
+
+module.exports.doAddReview = function(req,res){
+    getCotageInfo(req,res,function(req,res,responseData){
+        rendderReviewForm(req,res,responseData);
     });
 };

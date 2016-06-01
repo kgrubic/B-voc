@@ -8,8 +8,9 @@ var ctrlOther = require('../controllers/other');
 
 /*Cotages pages*/
 router.get('/', ctrlCotages.homelist);
-router.get('/cotage',ctrlCotages.cotageInfo);
-router.get('/cotages/review/new',ctrlCotages.addReview);
+router.get('/cotages/:cotagesid',ctrlCotages.cotageInfo);
+router.get('/cotages/:cotagesid/review/new',ctrlCotages.addReview);
+router.post('/cotages/:cotagesid/review/new',ctrlCotages.doAddReview);
 
 /*Other pages*/
 router.get('/about',ctrlOther.about);
