@@ -21,8 +21,8 @@ var _showError = function (req, res, status) {
   }
   res.status(status);
   res.render('error', {
-    title : title,
-    content : content
+    status : title,
+    message : content
   });
 };
 
@@ -138,8 +138,37 @@ module.exports.addReview = function(req, res) {
 };
 
 
-module.exports.doAddReview = function(req,res){
-    getCotageInfo(req,res,function(req,res,responseData){
-        rendderReviewForm(req,res,responseData);
-    });
+module.exports.doAddReview = function(req, res){
+  var requestOptions, path, cotagesid, postdata;
+  cotagesid = req.params.cotagesid;
+  path = "/api/cotages/" + cotagesid + '/review';
+  postdata = {
+    author: req.body.name,
+    rating: parseInt(req.body.rating, 10),
+    reviewText: req.body.review
+  };
+  requestOptions = {
+    url : apiOptions.server + path,
+    method : "POST",
+    json : postdata
+  };
+  if (!postdata.author || !postdata.rating || !postdata.reviewText) {
+    res.redirect('/cotages/' + cotagesid + '/review/new?err=val');
+  } else {
+    request(
+      requestOptions,
+      function(err, response, body) {
+        if (response.statusCode === 201) {
+           console.log(body);
+          res.redirect('/cotages/' + cotagesid);
+        } else if (response.statusCode === 400 && body.name && body.name === "ValidationError" ) {
+           console.log(body);
+          res.redirect('/cotages/' + cotagesid + '/review/new?err=val');
+        } else {
+          console.log(body);
+          _showError(req, res, response.statusCode);
+        }
+      }
+    );
+  }
 };

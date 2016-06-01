@@ -7,7 +7,81 @@ var sendJSONresponse = function(res,status,content){
 };
 
 module.exports.reviewCreate = function(req,res){
-	sendJSONresponse(res,200,{"status":"sucess"})
+  if (req.params.cotagesid) {
+    Cot
+      .findById(req.params.cotagesid)
+      .select('reviews')
+      .exec(
+        function(err, cotage) {
+          if (err) {
+            sendJSONresponse(res, 400, err);
+          } else {
+            console.log(cotage);
+            doAddReview(req, res, cotage);
+          }
+        }
+    );
+  } else {
+    sendJSONresponse(res, 404, {
+      "message": "Not found, cotagesid required"
+    });
+  }
+};
+
+
+var doAddReview = function(req, res, cotage) {
+  if (!cotage) {
+    sendJSONresponse(res, 404, "cotagesid not found");
+  } else {
+    cotage.reviews.push({
+      author: req.body.author,
+      rating: req.body.rating,
+      reviewText: req.body.reviewText
+    });
+    cotage.save(function(err, cotage) {
+      var thisReview;
+      if (err) {
+        sendJSONresponse(res, 400, err);
+      } else {
+        updateAverageRating(cotage._id);
+        thisReview = cotage.reviews[cotage.reviews.length - 1];
+        sendJSONresponse(res, 201, thisReview);
+      }
+    });
+  }
+};
+
+var updateAverageRating = function(cotagesid) {
+  console.log("Update rating average for", cotagesid);
+  Cot
+    .findById(cotagesid)
+    .select('reviews')
+    .exec(
+      function(err, cotage) {
+        if (!err) {
+          doSetAverageRating(cotage);
+        }
+      });
+};
+
+var doSetAverageRating = function(cotage) {
+  var i, reviewCount, ratingAverage, ratingTotal;
+  if (cotage.reviews && cotage.reviews.length > 0) {
+    reviewCount = cotage.reviews.length;
+    ratingTotal = 0;
+    for (i = 0; i < reviewCount; i++) {
+      ratingTotal = ratingTotal + cotage.reviews[i].rating;
+    }
+    ratingAverage = parseInt(ratingTotal / reviewCount, 10);
+    cotage.rating = ratingAverage;
+    cotage.save(function(err) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log("Average rating updated to", ratingAverage);
+      }
+    });
+  }
 };
 
 module.exports.reviewReadOne = function(req,res){
