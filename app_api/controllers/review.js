@@ -41,6 +41,7 @@ var doAddReview = function(req, res, cotage) {
     cotage.save(function(err, cotage) {
       var thisReview;
       if (err) {
+        console.log(err);
         sendJSONresponse(res, 400, err);
       } else {
         updateAverageRating(cotage._id);

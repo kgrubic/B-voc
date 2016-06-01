@@ -128,7 +128,8 @@ module.exports.cotageInfo = function(req, res) {
 var rendderReviewForm = function (req,res,cotReview){
     res.render('cotage-review-form',{
         title: 'Review ' + cotReview.name+ ' on B-voc',
-        pageHeader: {title : 'Review ' + cotReview.name}
+        pageHeader: {title : 'Review ' + cotReview.name},
+        error: req.query.err
     });
 };
 module.exports.addReview = function(req, res) {
